@@ -122,8 +122,13 @@ const PROMPT_RANGE = 15;
  * single limiter sees every request. Same speed, one source of truth.
  */
 const IMAGE_CONCURRENCY = 1;
-/** Panels rendered together, in parallel, inside one server environment. */
-const IMAGE_BATCH = 4;
+/**
+ * Panels rendered together, in parallel, inside one server environment.
+ * The server holds a pool of Agnes keys (one free account each) and hands each
+ * panel to whichever key is free, so a group of this size runs side by side
+ * without any single account exceeding its own limit.
+ */
+const IMAGE_BATCH = 9;
 
 /** True when a failure message is provider capacity pressure, not a bad panel. */
 function isRateLimitMessage(msg: string): boolean {
