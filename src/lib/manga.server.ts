@@ -2240,7 +2240,7 @@ export async function generateImage(
     let throttled = false;
     // withImageKey owns the provider's request budget: this waits for a free
     // slot (including any shared cooldown), so the free tier is respected.
-    const url = await withImageKey(slot, attempt, async (key) => {
+    const url = await withImageKey(slot, attempt, async (key, keyIndex) => {
       const gate = killableSignal(IMAGE_REQUEST_TIMEOUT_MS);
       try {
         const res = await fetch(AGNES_URL, {
@@ -2270,7 +2270,7 @@ export async function generateImage(
           const out = json.data?.[0]?.url ?? undefined;
           if (out) {
             if (await isRealImage(out)) {
-              noteImageSuccess();
+              noteImageSuccess(keyIndex);
               return out;
             }
             lastErr = "blank image rejected";
@@ -2306,6 +2306,7 @@ export async function generateImage(
             const waitMs = noteRateLimit(
               /1015/.test(errorBody) ? Math.max(headerWait ?? 0, 15_000) : headerWait,
               hardBlock,
+              keyIndex,
             );
             throttled = true;
             lastErr = `${res.status} rate limited, waiting ${Math.round(waitMs / 1000)}s`;
