@@ -123,7 +123,7 @@ const PROMPT_RANGE = 15;
  */
 const IMAGE_CONCURRENCY = 1;
 /** Panels rendered together, in parallel, inside one server environment. */
-const IMAGE_BATCH = 8;
+const IMAGE_BATCH = 4;
 
 /** True when a failure message is provider capacity pressure, not a bad panel. */
 function isRateLimitMessage(msg: string): boolean {
@@ -1013,10 +1013,16 @@ function Index() {
                   }
                   return;
                 }
-                logFailure(
-                  "draw",
-                  `Panel #${r.index + 1} did not render: ${r.error ?? "render failed"}`,
-                );
+                // Waiting for the image service's per-minute budget is normal
+                // pacing, not a failure: the panel goes back in the queue and
+                // is drawn a moment later, so it must not be logged as an error.
+                const reason = r.error ?? "render failed";
+                const paced = /429|rate limit|1015|too many requests/i.test(reason);
+                if (paced && job) {
+                  logWarn("draw", `Panel #${r.index + 1}: waiting its turn (image limit) — will retry`);
+                } else {
+                  logFailure("draw", `Panel #${r.index + 1} did not render: ${reason}`);
+                }
                 if (job) {
                   requeue(job, r.error ?? "render failed");
                 } else {

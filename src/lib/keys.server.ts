@@ -20,13 +20,13 @@ const WINDOW_MS = 60_000;
  * 18/minute window below is the real budget, so several renders may run side by
  * side instead of the queue trickling one image every three seconds.
  */
-const SPACING_MS = 200;
+const SPACING_MS = 3_400;
 
 /**
  * How many renders may be in flight at once. A render takes ~10s, so four
  * lanes keep the minute budget busy without ever exceeding it.
  */
-export const PER_KEY_CONCURRENCY = 8;
+export const PER_KEY_CONCURRENCY = 4;
 
 
 
