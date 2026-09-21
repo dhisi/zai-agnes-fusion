@@ -97,6 +97,7 @@ let hardBlocked = false;
 export function noteImageSuccess(): void {
   throttleLevel = 0;
   cooldownUntil = 0;
+  hardBlocked = false;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
