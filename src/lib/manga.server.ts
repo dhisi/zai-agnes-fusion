@@ -2297,8 +2297,15 @@ export async function generateImage(
                 : undefined;
             // Cloudflare 1015 is a rolling-window block. Give it a full minute
             // when no longer Retry-After is supplied; short retries prolong it.
+            // Two different limits answer with 429. "API rate limit for free
+            // users" is the ordinary burst limiter and clears in seconds. "The
+            // rate exceeds the limit" is the escalated account-wide block that
+            // repeated instant retries cause; that one needs a real pause and
+            // a single lane, or every further request just prolongs it.
+            const hardBlock = /rate exceeds the limit/i.test(errorBody);
             const waitMs = noteRateLimit(
               /1015/.test(errorBody) ? Math.max(headerWait ?? 0, 15_000) : headerWait,
+              hardBlock,
             );
             throttled = true;
             lastErr = `${res.status} rate limited, waiting ${Math.round(waitMs / 1000)}s`;

@@ -68,15 +68,26 @@ function spacing(): number {
  * short and flat (never an exponential minute-long freeze), which is what used
  * to leave the whole page waiting while the provider was ready again.
  */
-export function noteRateLimit(retryAfterMs?: number): number {
+export function noteRateLimit(retryAfterMs?: number, hard = false): number {
   throttleLevel = Math.min(throttleLevel + 1, 3);
-  const backoff =
-    retryAfterMs && retryAfterMs > 0
+  if (hard) hardBlocked = true;
+  const backoff = hard
+    ? 60_000
+    : retryAfterMs && retryAfterMs > 0
       ? Math.min(Math.max(retryAfterMs, 2_000), 20_000)
       : Math.min(3_000 + 2_000 * (throttleLevel - 1), 12_000);
   cooldownUntil = Math.max(cooldownUntil, Date.now() + backoff);
   return backoff;
 }
+
+/**
+ * The provider's free tier limits how many renders may be in flight AT ONCE,
+ * not how many per minute: six simultaneous requests all succeed, twenty get
+ * six instant rejections. Worse, retrying a rejection immediately escalates
+ * into an account-wide block that lasts many minutes. So after a hard block
+ * the app drops to a single lane until a render succeeds again.
+ */
+let hardBlocked = false;
 
 /**
  * Record a success so the throttle relaxes again. One good render clears the
@@ -86,6 +97,7 @@ export function noteRateLimit(retryAfterMs?: number): number {
 export function noteImageSuccess(): void {
   throttleLevel = 0;
   cooldownUntil = 0;
+  hardBlocked = false;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -98,7 +110,7 @@ function prune(now: number) {
 function waitFor(now: number): number {
   prune(now);
   if (now < cooldownUntil) return cooldownUntil - now;
-  if (inFlight >= PER_KEY_CONCURRENCY) return 200;
+  if (inFlight >= (hardBlocked ? 1 : PER_KEY_CONCURRENCY)) return 200;
   const sinceLast = now - lastStart;
   const gap = spacing();
   if (sinceLast < gap) return gap - sinceLast;
