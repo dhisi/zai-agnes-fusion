@@ -110,7 +110,7 @@ function prune(now: number) {
 function waitFor(now: number): number {
   prune(now);
   if (now < cooldownUntil) return cooldownUntil - now;
-  if (inFlight >= PER_KEY_CONCURRENCY) return 200;
+  if (inFlight >= (hardBlocked ? 1 : PER_KEY_CONCURRENCY)) return 200;
   const sinceLast = now - lastStart;
   const gap = spacing();
   if (sinceLast < gap) return gap - sinceLast;
